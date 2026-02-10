@@ -1,0 +1,50 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: yandex-maps-reviews-app
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www/html
+      - /var/www/html/vendor
+      - /var/www/html/node_modules
+      - /var/www/html/public/build
+    env_file:
+      - .env.docker
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  db:
+    image: mysql:8.0
+    container_name: yandex-maps-reviews-db
+    restart: unless-stopped
+    ports:
+      - "33060:3306"
+    environment:
+      MYSQL_DATABASE: laravel
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_PASSWORD: secret
+      MYSQL_USER: laravel
+    volumes:
+      - dbdata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-psecret"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  dbdata:
+    driver: local
