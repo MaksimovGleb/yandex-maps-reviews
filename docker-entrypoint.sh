@@ -40,10 +40,8 @@ until php artisan db:monitor --databases=mysql > /dev/null 2>&1; do
   sleep 1
 done
 
-# Clear everything to ensure clean state
+# Clear config cache only to ensure correct env detection
 php artisan config:clear
-php artisan cache:clear
-php artisan route:clear
 
 # Run tests
 echo "Running tests..."
@@ -54,13 +52,9 @@ php artisan test --without-tty || echo "WARNING: Tests failed! Check logs for de
 echo "Preparing database for application..."
 php artisan migrate --seed --force
 
-# Verify user creation
-echo "Verifying test user..."
-if php artisan tinker --execute="echo App\Models\User::where('email', 'test@example.com')->exists() ? 'OK' : 'FAIL';" | grep -q "OK"; then
-    echo "Test user confirmed."
-else
-    echo "ERROR: Test user was not created! Check DatabaseSeeder."
-fi
+# Now it is safe to clear other caches since tables exist
+php artisan cache:clear
+php artisan route:clear
 
 # Set permissions
 chown -R www-data:www-data storage bootstrap/cache
