@@ -11,6 +11,11 @@ class GetYandexReviewsAction
     public function execute(string $url): YandexIntegrationDTO
     {
         $id = $this->extractOrgId($url);
+        
+        if (!$id) {
+            throw new \Exception('Не удалось определить ID организации из ссылки');
+        }
+
         $headers = [
             'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
             'Accept-Language' => 'ru-RU',
@@ -29,7 +34,7 @@ class GetYandexReviewsAction
         // 2. Отзывы (виджет или JSON-фоллбэк)
         $res = Http::withHeaders($headers + ['Referer' => "https://yandex.ru/maps-reviews-widget/v1/?businessId=$id"])
             ->get("https://yandex.ru/maps-reviews-widget/v1/getReviews?businessId=$id&pageSize=50");
-        
+
         $raw = $res->json()['reviews'] ?? [];
 
         if (empty($raw) && preg_match_all('/<script type="application\/json" class="[^"]*">(.+?)<\/script>/s', $html, $ms)) {
@@ -48,14 +53,7 @@ class GetYandexReviewsAction
             'external_id' => $i['reviewId'] ?? Str::random(10),
         ], $raw);
 
-        dd([
-            'rating' => round($rating, 1),
-            'reviews_count' => $count,
-            'org_name' => $name,
-            'reviews' => $mapped
-        ]);
-
-        return new YandexIntegrationDTO($name, $rating, $count, $mapped);
+        return new YandexIntegrationDTO($name, round($rating, 1), $count, $mapped);
     }
 
     private function findReviews(array $d): array
