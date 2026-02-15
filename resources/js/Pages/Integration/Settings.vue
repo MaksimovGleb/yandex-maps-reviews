@@ -34,7 +34,6 @@ const submit = () => {
                         type="url"
                         class="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-400 text-sm py-2 px-3"
                         v-model="form.yandex_url"
-                        placeholder="https://yandex.ru/maps/org/samoye_populyarnoye_kafe/1010501395/reviews/"
                         required
                     />
                     <div v-if="form.errors.yandex_url" class="mt-2 text-sm text-red-600">

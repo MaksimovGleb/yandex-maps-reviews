@@ -11,7 +11,7 @@ class GetYandexReviewsAction
     public function execute(string $url): YandexIntegrationDTO
     {
         $id = $this->extractOrgId($url);
-        
+
         if (!$id) {
             throw new \Exception('Не удалось определить ID организации из ссылки');
         }
@@ -21,8 +21,8 @@ class GetYandexReviewsAction
             'Accept-Language' => 'ru-RU',
         ];
 
-        // 1. Данные из HTML
-        $html = Http::withHeaders($headers)->get($url)->body();
+        // 1. Данные из HTML (используем путь /reviews/ для получения большего количества отзывов в JSON)
+        $html = Http::withHeaders($headers)->get("https://yandex.ru/maps/org/$id/reviews/")->body();
         preg_match('/<h1[^>]*>(.*?)<\/h1>/', $html, $m1);
         preg_match('/"ratingValue":\s*"?([\d\.]+)"?/', $html, $m2);
         preg_match('/"reviewCount":\s*"?(\d+)"?/', $html, $m3);
@@ -32,7 +32,7 @@ class GetYandexReviewsAction
         $count = (int)($m3[1] ?? 0);
 
         // 2. Отзывы (виджет или JSON-фоллбэк)
-        $res = Http::withHeaders($headers + ['Referer' => "https://yandex.ru/maps-reviews-widget/v1/?businessId=$id"])
+        $res = Http::withHeaders($headers + ['Referer' => "https://yandex.ru/maps/org/$id/"])
             ->get("https://yandex.ru/maps-reviews-widget/v1/getReviews?businessId=$id&pageSize=50");
 
         $raw = $res->json()['reviews'] ?? [];
@@ -69,6 +69,14 @@ class GetYandexReviewsAction
 
     private function extractOrgId(string $url): ?string
     {
-        return preg_match('/\/(\d{8,12})\/?/', $url, $m) ? $m[1] : null;
+        if (preg_match('/\/(\d{8,12})\/?/', $url, $m)) {
+            return $m[1];
+        }
+
+        if (preg_match('/oid(?:=|%3D)(\d{8,12})/', $url, $m)) {
+            return $m[1];
+        }
+
+        return null;
     }
 }
